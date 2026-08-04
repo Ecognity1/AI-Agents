@@ -1,0 +1,14 @@
+variable "subscription_id" { type = string }
+variable "location" { type = string }
+variable "environment" { type = string }
+variable "resource_group_name" { type = string }
+variable "service_plan_name" { type = string }
+variable "service_plan_sku" { type = string }
+variable "web_app_name" { type = string }
+variable "deployment_storage_account_name" { type = string }
+variable "application_package_url" {
+  type      = string
+  default   = ""
+  nullable  = false
+  sensitive = false
+}

@@ -1,0 +1,75 @@
+name: Application
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: folio-development-application
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Create immutable package
+        shell: bash
+        run: |
+          zip -qr folio.zip dist src package.json
+          echo "PACKAGE_SHA256=$(sha256sum folio.zip | cut -d' ' -f1)" >> "$GITHUB_ENV"
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Publish private package
+        shell: bash
+        run: |
+          blob="folio-${PACKAGE_SHA256}.zip"
+          az storage blob upload --auth-mode login --account-name stfoliodev7b53f31b --container-name deployments --name "$blob" --file folio.zip --overwrite false
+          echo "PACKAGE_URL=https://stfoliodev7b53f31b.blob.core.windows.net/deployments/$blob" >> "$GITHUB_ENV"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.2
+      - name: Initialize Terraform
+        working-directory: infrastructure/terraform
+        run: >-
+          terraform init -input=false
+          -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}"
+          -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}"
+          -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+          -backend-config="key=folio/development.tfstate"
+          -backend-config="use_oidc=true"
+      - name: Deploy package reference
+        working-directory: infrastructure/terraform
+        run: |
+          terraform plan -input=false -lock-timeout=5m -var-file=environments/development.tfvars -var="application_package_url=${PACKAGE_URL}" -out=application.tfplan
+          terraform apply -input=false -lock-timeout=5m -auto-approve application.tfplan
+      - name: Validate live application
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            status=$(curl --silent --output status.json --write-out '%{http_code}' https://folio-bookstore-dev-7b53f31b.azurewebsites.net/api/v1/status)
+            catalog=$(curl --silent --output books.json --write-out '%{http_code}' https://folio-bookstore-dev-7b53f31b.azurewebsites.net/api/v1/books)
+            root=$(curl --silent --output root.html --write-out '%{http_code}' https://folio-bookstore-dev-7b53f31b.azurewebsites.net/)
+            if [ "$status" = 200 ] && [ "$catalog" = 200 ] && [ "$root" = 200 ]; then exit 0; fi
+            sleep 10
+          done
+          exit 1

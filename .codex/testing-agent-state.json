@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "completedAt": "2026-08-04T13:58:46.8352684+05:30",
+  "files": [
+    { "path": "index.html", "sha256": "f4cf8d42422474c6ce8b5d2028d9a28e7fde9cd157fedc8830ae57edc175738f" },
+    { "path": "package-lock.json", "sha256": "4dc9c9d3e04abe5f56bcc68b7d6138df66ecc477c3f02121ae42c492d09aced5" },
+    { "path": "package.json", "sha256": "cd284ec62e0ff0eae7f752f1d24f9395442af0dd456890a1be07187b190babd0" },
+    { "path": "playwright.config.js", "sha256": "75d25a5f053408352d27eb23fe3813da7e3213671b7c235c3bc06397fd46a697" },
+    { "path": "src/app.js", "sha256": "338ebea55f5327e8f96731b9d6787d660aebf8bfaee140dc60fef65fae16b9a1" },
+    { "path": "src/catalog.js", "sha256": "fdc4106482b6b2fe1fab00a0edaa91bb82c24669775bad45e4e9553788bd7b0b" },
+    { "path": "src/server/api.js", "sha256": "b831648842628127c3eb456394b68eee282b616f6dda9096a744fede235eed03" },
+    { "path": "src/server/commerce.js", "sha256": "c1ada8c8ca0acc67da18e4256b7677a3cd70480c6ed058d0d5913d30077e78b7" },
+    { "path": "src/server/local-adapters.js", "sha256": "3a134a33431cbdbd31f878ef3740aa87f75e77d1211bfd9e56100e1acb64032f" },
+    { "path": "src/server/repository.js", "sha256": "0a774894994d26b393fc54f5d043232f69bb84e1e401fd9a36d6599f8e34ea1a" },
+    { "path": "src/store.js", "sha256": "b816b764ba345afa42eb489b4f7db09d3acb32df0a20c40fc7a9c79f402c6129" },
+    { "path": "src/styles.css", "sha256": "9c6f109874861d6460b1f192bb43131bcb9ff5fb0179cd1686faa3d3e7c33459" },
+    { "path": "test/commerce.test.js", "sha256": "1c33d63283f27df3c028f77fd94b4bb93382f229311a47ebfc6c54fcbeff2e60" },
+    { "path": "test/store.test.js", "sha256": "0a8900a9dc72075f2641399d9258796c2b8ad05a9b839d3f7a3df3aef45b7d3f" },
+    { "path": "tests/e2e/bookstore.spec.js", "sha256": "4c744f392da7aabfd77c88defbc95b80dc68d6aeed1245e1245be52897dc7120" },
+    { "path": "vite.config.js", "sha256": "956c223ff23f918445d05647ee9529818cfbdf002e4f3e50b4b38454ca3a1fca" }
+  ]
+}

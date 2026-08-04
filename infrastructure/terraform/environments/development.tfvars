@@ -1,0 +1,8 @@
+subscription_id                 = "7b53f31b-558b-4108-b0c2-8fc0c7ea7435"
+location                        = "centralindia"
+environment                     = "development"
+resource_group_name             = "rg-folio-bookstore-dev-cin"
+service_plan_name               = "asp-folio-bookstore-dev-cin"
+service_plan_sku                = "B1"
+web_app_name                    = "folio-bookstore-dev-7b53f31b"
+deployment_storage_account_name = "stfoliodev7b53f31b"

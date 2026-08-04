@@ -1,0 +1,63 @@
+name: Infrastructure
+
+on:
+  pull_request:
+    paths: ["infrastructure/terraform/**", ".github/workflows/infrastructure.yml"]
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Apply the reviewed development plan
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: folio-development-infrastructure
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: development
+    defaults:
+      run:
+        working-directory: infrastructure/terraform
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.2
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Format
+        run: terraform fmt -check -recursive
+      - name: Initialize remote state
+        run: >-
+          terraform init -input=false
+          -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}"
+          -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}"
+          -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+          -backend-config="key=folio/development.tfstate"
+          -backend-config="use_oidc=true"
+      - name: Validate
+        run: terraform validate
+      - name: Plan
+        run: terraform plan -input=false -lock-timeout=5m -var-file=environments/development.tfvars -out=development.tfplan
+      - name: Apply
+        if: github.event_name == 'workflow_dispatch' && inputs.apply
+        run: terraform apply -input=false -lock-timeout=5m -auto-approve development.tfplan
+      - name: Outputs
+        if: github.event_name == 'workflow_dispatch' && inputs.apply
+        run: terraform output -json
