@@ -192,30 +192,59 @@ Local backend-disabled validation from the actual Terraform root passed: module 
 
 Application validation for this rerun: `npm.cmd test` passed 11/11 and `npm.cmd run build` passed. `git diff --check` passed.
 
-### Missing secure CI/CD prerequisites
+### Secure CI/CD bootstrap and required inputs
 
-No repository Actions secrets, Actions variables, GitHub environments, reusable OIDC deployment identity, or approved remote Terraform state backend were found. The workflows require:
+The initial scan found no Actions inputs, OIDC identity, or remote state. After explicit approval, the following minimum bootstrap was completed without a client secret:
 
-- GitHub environment: `development`, with any required reviewers/protection configured by the repository owner.
-- Environment secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` for an approved federated deployment identity. No client secret is required or permitted.
-- Environment variables: `TF_STATE_RESOURCE_GROUP`, `TF_STATE_STORAGE_ACCOUNT`, and `TF_STATE_CONTAINER` for an approved private Azure Blob state backend.
-- Federated credential restricted to this repository and the `development` environment.
-- Least-privilege Azure roles sufficient to read/write remote state, adopt/manage only the existing development resource group, and upload deployment blobs. Role scope must be reviewed before assignment; no role was created or broadened in this rerun.
+- GitHub environment: `development`.
+- Environment secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`; these contain identifiers only. No client secret exists.
+- Environment variables: `TF_STATE_RESOURCE_GROUP=rg-folio-bookstore-dev-cin`, `TF_STATE_STORAGE_ACCOUNT=stfoliodev7b53f31b`, and `TF_STATE_CONTAINER=tfstate`.
+- Private state container: ARM-managed `tfstate` container in the existing storage account, with public access disabled.
+- Entra application/client ID `a41576b5-7822-498a-ba41-910ab9fbc325`, service-principal object ID `6d760af1-35d5-41d2-a097-e59741e0313e`.
+- Federated credential restricted to issuer `https://token.actions.githubusercontent.com`, audience `api://AzureADTokenExchange`, and GitHub's immutable repository/environment subject `repo:Ecognity1@253695279/AI-Agents@1314883726:environment:development`.
+- `Contributor` is limited to the existing resource group; `Storage Blob Data Contributor` is limited to the existing storage account. No subscription-wide role was granted.
 
-The current workspace also contains extensive pre-existing untracked user files. Publishing the workflows would require an intentional commit/push boundary that excludes unrelated work. Nothing was committed, pushed, or triggered.
+The deployment files and workflows are published on `main` at commit `a1e1a3d1f335811dc85cc5e96ea2be5cce2f6239`. That pre-existing shared commit also contains broader repository files; it was not rewritten during deployment.
+
+### GitHub Actions execution evidence
+
+| Run | Result and evidence |
+|---|---|
+| Infrastructure `30908452234` | Failed at `azure/login` before Terraform with `AADSTS700213`. GitHub emitted an immutable repository-ID subject that did not match the original name-only federated subject. No Terraform action ran. |
+| OIDC repair | Existing federated credential was updated in place to the exact observed immutable subject. Issuer, audience, application, environment, and RBAC scopes were unchanged. |
+| Infrastructure apply `30908655529` | OIDC login, remote-state initialization, formatting, validation, and plan passed. Plan: **6 imports, 0 add, 2 in-place changes, 0 destroy**. Apply imported all six existing Azure resources into locked remote state, then failed changing F1 to B1 with Azure HTTP 409, ExtendedCode `03029` (regional instances unavailable). State lock released; no replacement or destruction occurred. |
+| Infrastructure reconciliation `30908849978` | Plan-only run passed. It showed **0 add, 2 in-place changes, 0 destroy** and no remaining imports, proving remote-state adoption persisted. The only drift is the approved F1-to-B1 plan change and Web App Always On. |
+| Application workflow | Not triggered because the infrastructure apply gate failed. This preserves the required infrastructure-before-application order. |
+
+Post-run Azure evidence: plan remains F1; the control plane briefly reported the Web App `Running`/`Normal`, but the actual HTTPS request returned HTTP 503. App settings still point to the private hash-named package using `SystemAssigned` managed identity and `/home/data/folio.json`. Root, status API, catalog API, and newly built artifact deployment are therefore not validated.
 
 ### Safe recovery and execution sequence
 
-1. Obtain explicit approval for the OIDC identity, exact RBAC scopes, remote-state resources, and GitHub environment protection.
-2. Bootstrap or select the approved remote state backend without overwriting existing state.
-3. Configure the GitHub environment, variables, and OIDC secrets.
-4. Publish only the reviewed deployment/IaC/workflow files through an intentional commit.
-5. Run the infrastructure workflow in plan-only mode. Confirm six imports, no destroy/replacement, and only the already approved F1-to-B1/Always-On in-place changes.
-6. Apply only after the reviewed plan and Azure regional B1 capacity are acceptable.
-7. Run the application workflow only after infrastructure succeeds, then require HTTP 200 from root, status API, and catalog API.
+1. Wait for Azure Central India B1 capacity and rerun the existing infrastructure workflow with `apply=true`; first confirm the plan remains 0 add, 2 in-place changes, 0 destroy.
+2. Do not enable async scaling or create a new resource group/region/topology without separate review and approval.
+3. After infrastructure succeeds and B1/Always On are verified, run the application workflow.
+4. Require the immutable blob publication and HTTP 200 from root, status API, and catalog API before accepting deployment.
 
-No additional paid topology, new region/resource group, async scaling, identity, RBAC assignment, backend resource, import, apply, workflow publication, or workflow run was performed during this rerun.
+No additional paid topology, new region/resource group, or async scaling was introduced. Application deployment remains blocked by external App Service capacity.
 
 ## 12. Final outcome
 
 **BLOCKED**
+
+## 13. Authorized South India redeployment
+
+The user authorized changing region and redeploying while preserving the Central India resources. Azure's live App Service location query for Linux B1 lists South India as supported, and Azure identifies South India as Central India's paired region. South India is selected as the closest architecture-compatible alternative; this is service-support evidence, while actual capacity is validated only by the infrastructure apply.
+
+| Item | South India deployment |
+|---|---|
+| Region | `southindia` |
+| Resource group | `rg-folio-bookstore-dev-sin` |
+| App Service plan | `asp-folio-bookstore-dev-sin`, Linux B1, one instance, Always On |
+| Web App | `folio-bookstore-dev-sin-7b53f31b` |
+| Deployment storage | `stfoliosin7b53f31b`, Standard LRS, private `deployments` container |
+| Remote state | Existing private state account/container, isolated key `folio/southindia-development.tfstate` |
+| Intended endpoint | `https://folio-bookstore-dev-sin-7b53f31b.azurewebsites.net` |
+
+The Central India state key and all Central India resources are retained. The new state imports only the separately bootstrapped South India resource group, then creates the new regional plan, Web App, storage account, and private container. The deployment pipeline identity remains environment-scoped; it must receive Contributor only on the new resource group and Blob Data Contributor only on the new storage account. The new Web App identity must receive Blob Data Reader only on the new storage account before package activation. No subscription-wide role is permitted.
+
+Until the new deployment passes infrastructure apply, private-package RBAC, application workflow, and HTTP root/status/catalog checks, the overall outcome remains **BLOCKED**.

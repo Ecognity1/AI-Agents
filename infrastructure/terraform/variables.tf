@@ -12,3 +12,7 @@ variable "application_package_url" {
   nullable  = false
   sensitive = false
 }
+variable "manage_package_reader_role" {
+  type    = bool
+  default = true
+}

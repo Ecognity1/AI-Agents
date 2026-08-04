@@ -10,4 +10,5 @@ module "folio" {
   web_app_name                    = var.web_app_name
   deployment_storage_account_name = var.deployment_storage_account_name
   application_package_url         = var.application_package_url
+  manage_package_reader_role      = var.manage_package_reader_role
 }

@@ -43,8 +43,8 @@ jobs:
         shell: bash
         run: |
           blob="folio-${PACKAGE_SHA256}.zip"
-          az storage blob upload --auth-mode login --account-name stfoliodev7b53f31b --container-name deployments --name "$blob" --file folio.zip --overwrite false
-          echo "PACKAGE_URL=https://stfoliodev7b53f31b.blob.core.windows.net/deployments/$blob" >> "$GITHUB_ENV"
+          az storage blob upload --auth-mode login --account-name stfoliosin7b53f31b --container-name deployments --name "$blob" --file folio.zip --overwrite false
+          echo "PACKAGE_URL=https://stfoliosin7b53f31b.blob.core.windows.net/deployments/$blob" >> "$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.2
@@ -55,7 +55,7 @@ jobs:
           -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}"
           -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}"
           -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
-          -backend-config="key=folio/development.tfstate"
+          -backend-config="key=folio/southindia-development.tfstate"
           -backend-config="use_oidc=true"
       - name: Deploy package reference
         working-directory: infrastructure/terraform
@@ -66,9 +66,9 @@ jobs:
         shell: bash
         run: |
           for attempt in 1 2 3 4 5 6; do
-            status=$(curl --silent --output status.json --write-out '%{http_code}' https://folio-bookstore-dev-7b53f31b.azurewebsites.net/api/v1/status)
-            catalog=$(curl --silent --output books.json --write-out '%{http_code}' https://folio-bookstore-dev-7b53f31b.azurewebsites.net/api/v1/books)
-            root=$(curl --silent --output root.html --write-out '%{http_code}' https://folio-bookstore-dev-7b53f31b.azurewebsites.net/)
+            status=$(curl --silent --output status.json --write-out '%{http_code}' https://folio-bookstore-dev-sin-7b53f31b.azurewebsites.net/api/v1/status)
+            catalog=$(curl --silent --output books.json --write-out '%{http_code}' https://folio-bookstore-dev-sin-7b53f31b.azurewebsites.net/api/v1/books)
+            root=$(curl --silent --output root.html --write-out '%{http_code}' https://folio-bookstore-dev-sin-7b53f31b.azurewebsites.net/)
             if [ "$status" = 200 ] && [ "$catalog" = 200 ] && [ "$root" = 200 ]; then exit 0; fi
             sleep 10
           done

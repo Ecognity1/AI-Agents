@@ -7,3 +7,4 @@ variable "service_plan_sku" { type = string }
 variable "web_app_name" { type = string }
 variable "deployment_storage_account_name" { type = string }
 variable "application_package_url" { type = string }
+variable "manage_package_reader_role" { type = bool }

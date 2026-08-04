@@ -85,6 +85,7 @@ resource "azurerm_linux_web_app" "this" {
 }
 
 resource "azurerm_role_assignment" "package_reader" {
+  count                = var.manage_package_reader_role ? 1 : 0
   scope                = azurerm_storage_account.deployments.id
   role_definition_name = "Storage Blob Data Reader"
   principal_id         = azurerm_linux_web_app.this.identity[0].principal_id
