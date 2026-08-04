@@ -41,6 +41,11 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Preserve active application package
+        shell: bash
+        run: |
+          package_url=$(az webapp config appsettings list --resource-group rg-folio-bookstore-dev-sin --name folio-bookstore-dev-sin-7b53f31b --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value | [0]" --output tsv 2>/dev/null || true)
+          echo "TF_VAR_application_package_url=${package_url}" >> "$GITHUB_ENV"
       - name: Format
         run: terraform fmt -check -recursive
       - name: Initialize remote state

@@ -229,7 +229,7 @@ No additional paid topology, new region/resource group, or async scaling was int
 
 ## 12. Final outcome
 
-**BLOCKED**
+Superseded by the authorized South India deployment outcome below.
 
 ## 13. Authorized South India redeployment
 
@@ -247,4 +247,22 @@ The user authorized changing region and redeploying while preserving the Central
 
 The Central India state key and all Central India resources are retained. The new state imports only the separately bootstrapped South India resource group, then creates the new regional plan, Web App, storage account, and private container. The deployment pipeline identity remains environment-scoped; it must receive Contributor only on the new resource group and Blob Data Contributor only on the new storage account. The new Web App identity must receive Blob Data Reader only on the new storage account before package activation. No subscription-wide role is permitted.
 
-Until the new deployment passes infrastructure apply, private-package RBAC, application workflow, and HTTP root/status/catalog checks, the overall outcome remains **BLOCKED**.
+### South India execution evidence
+
+| Evidence | Actual result |
+|---|---|
+| Published change | Commit `bea06105d8ecc6a5ee0d32510417ed6080f2e20d` (`deploy Folio to South India`). |
+| Infrastructure workflow | Run `30909713032` passed. Terraform applied **1 resource-group import, 4 adds, 1 in-place tag change, 0 destroy**. |
+| Infrastructure resources | B1 Linux plan, Node 20 Web App, Standard LRS storage account, and private deployment container created in South India. HTTPS, TLS 1.2, disabled publishing basic auth, managed identity, health path, logs, and Always On were configured. |
+| Data-plane RBAC | GitHub OIDC identity received Blob Data Contributor only on the new storage account; Web App identity received Blob Data Reader only on that account. |
+| Application workflow | Run `30910048895` passed all steps in 4m10s: locked restore, 11 Node tests, Vite build, immutable package, OIDC login, private upload, Terraform package activation, and bounded live validation. |
+| Artifact | SHA-256 `c86d20e88998927d9af7739fe7ee7309f160b7c834e186e67ee4ebfa310f11b1`; private blob `folio-c86d20e88998927d9af7739fe7ee7309f160b7c834e186e67ee4ebfa310f11b1.zip`. Application Terraform result: 0 add, 1 in-place change, 0 destroy. |
+| Independent live validation | Root HTTP 200 with Folio content; status API HTTP 200 reporting the development adapter environment; catalog API HTTP 200 with 8 books. |
+| Runtime state | Web App `Running`, availability `Normal`, HTTPS only; App Service plan B1 in South India. |
+| Retained environment | Central India resource group, resources, and original remote-state key remain intact; no cleanup or destruction occurred. |
+
+The deployed application remains development-only: JSON persistence is not scale-safe or relational, local payment/notification/admin authorization adapters are not production integrations, and production SLA/RTO/RPO/security/provider decisions remain unresolved. B1 and storage incur ongoing Azure charges.
+
+## 14. Final outcome
+
+**DEPLOYED WITH KNOWN RISKS**
